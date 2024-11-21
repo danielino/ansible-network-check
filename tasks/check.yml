@@ -1,0 +1,51 @@
+
+
+- name: debug
+  debug:
+    msg: "checking for check id: {{ outer.id }}"
+
+- name: ping
+  when: outer.type == 'ping'
+  shell: "ping -c1 {{ item }}"
+  ignore_errors: true
+  loop: "{{ outer.destination }}"
+  register: _ping_result
+
+- name: telnet
+  when: outer.type == 'tcp'
+  wait_for:
+    host: "{{ item | split(':') | first }}"
+    port: "{{ item | split(':') | last }}"
+    timeout: "{% if outer.timeout is defined %}{{ outer.timeout }}{% else %}300{% endif %}"
+  ignore_errors: true
+  loop: "{{ outer.destination }}"
+  register: _tcp_result
+
+- name: set proxy facts
+  set_fact:
+    proxy: "{% if outer.options is defined and outer.options.proxy is defined %}{{ outer.options.proxy }}{% endif %}"
+
+
+- name: debug
+  debug:
+    var: _tcp_result
+
+- name: check http
+  when: outer.type == 'http'
+  uri:
+    url: "{{ item }}"
+  loop: "{{ outer.destination }}"
+  ignore_errors: true
+  environment:
+    http_proxy: "{{ proxy }}"
+    https_proxy: "{{ proxy }}"
+  register: _http_result
+
+- name: set res fact
+  set_fact:
+    res: "{% if outer.type == 'http' %}{{ _http_result.results | mapattributes(['item', 'failed']) }}{% elif outer.type == 'ping' %}{{ _ping_result.results | mapattributes(['item', 'failed'])  }}{% elif outer.type == 'tcp' %}{{ _tcp_result.results | mapattributes(['item', 'failed']) }}{% endif %}"
+
+
+- name: set results
+  set_fact:
+    results: "{{ results | default([]) + [ { 'id': outer.id , 'results' : res } ] }}"

@@ -1,0 +1,26 @@
+- hosts: localhost
+  vars:
+    ansible_connection: local
+    ambiente: produzione
+  tasks:
+    - ansible.builtin.include_vars: network-checks-vars.yml
+    - name: execute tests without conditional clause
+      when: 
+        - outer.condition is not defined
+      loop: "{{ checks | rejectattr('condition', 'defined') }}"
+      loop_control:
+        loop_var: outer
+      include_tasks: "{{ playbook_dir }}/tasks/check.yml"
+
+    - name: execute tests with conditional clause
+      when:
+        - "outer.condition is defined and {{ outer.condition.key }} {{ outer.condition.operator }} '{{ outer.condition.value }}'"
+      loop: "{{ checks | selectattr('condition', 'defined') }}"
+      loop_control:
+        loop_var: outer
+      include_tasks: "{{ playbook_dir }}/tasks/check.yml"
+
+    - name: create html result page
+      template:
+        src: "{{ playbook_dir }}/templates/template.html.j2"
+        dest: template.html

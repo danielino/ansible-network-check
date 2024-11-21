@@ -1,0 +1,29 @@
+checks:
+  - id: ping-001
+    type: ping
+    condition:
+      key: ambiente
+      operator: ==
+      value: produzione
+    destination:
+      - 192.168.0.1
+
+  - id: ping-002
+    type: ping
+    destination:
+      - 192.168.0.1
+      - 192.168.0.2
+
+  - id: tcp-001
+    type: tcp
+    timeout: 5
+    destination:
+      - 192.168.0.1:22
+      - 192.168.0.1:80
+      - 192.168.0.1:8080
+      - 192.168.0.2:80
+
+  - id: http
+    type: http
+    destination:
+      - https://www.google.it
